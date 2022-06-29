@@ -1,6 +1,4 @@
-import sys
-sys.path.append("")
-from server.fedml_aggregator_code import FedMLAggregator
+from .fedml_aggregator_code import FedMLAggregator
 from fedml.cross_silo.horizontal.fedml_trainer import FedMLTrainer
 from fedml.cross_silo.horizontal.fedml_client_manager import FedMLClientManager
 from fedml.cross_silo.horizontal.fedml_server_manager import FedMLServerManager

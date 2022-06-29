@@ -4,11 +4,12 @@ import fedml
 import torch
 from fedml.data.MNIST.data_loader import download_mnist, load_partition_data_mnist
 
-import sys
-sys.path.append("")
-from server.FedML_Horizontal_code import FedML_Horizontal
+# import sys
+# sys.path.append("")
+from management.FedML_Horizontal_code import FedML_Horizontal
 
 # from fedml.cross_silo.horizontal.fedml_horizontal_api import FedML_Horizontal
+
 
 class Server:
     def __init__(self, args, device, dataset, model, model_trainer=None):
@@ -21,7 +22,7 @@ class Server:
                 device,
                 dataset,
                 model,
-                model_trainer=model_trainer,
+                model_trainer= model_trainer,
                 preprocessed_sampling_lists=None,
             )
 
