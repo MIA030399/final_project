@@ -5,10 +5,9 @@ import torch
 from fedml.data.MNIST.data_loader import download_mnist, load_partition_data_mnist
 # fixed the import
 
-# import sys
-# sys.path.append("")
-
-from .FedML_Horizontal_code import FedML_Horizontal
+import sys
+sys.path.append(".")
+from management.FedML_Horizontal_code import FedML_Horizontal
 
 class Client:
     def __init__(self, args, device, dataset, model, model_trainer=None):

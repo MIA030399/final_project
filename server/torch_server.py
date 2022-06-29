@@ -4,8 +4,8 @@ import fedml
 import torch
 from fedml.data.MNIST.data_loader import download_mnist, load_partition_data_mnist
 
-# import sys
-# sys.path.append("")
+import sys
+sys.path.append(".")
 from management.FedML_Horizontal_code import FedML_Horizontal
 
 # from fedml.cross_silo.horizontal.fedml_horizontal_api import FedML_Horizontal
