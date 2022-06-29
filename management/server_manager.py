@@ -107,7 +107,9 @@ class ServerManager(Observer):
         self.message_handler_dict = dict()
 
     def run(self):
+        # Firstly, register the messager
         self.register_message_receive_handlers()
+        # Then the message manager can start to receive message
         self.com_manager.handle_receive_message()
         logging.info("running")
 
@@ -137,6 +139,7 @@ class ServerManager(Observer):
     def register_message_receive_handlers(self) -> None:
         pass
 
+# store all the handler, so that the message management can pass those message to different handler
     def register_message_receive_handler(self, msg_type, handler_callback_func):
         self.message_handler_dict[msg_type] = handler_callback_func
 

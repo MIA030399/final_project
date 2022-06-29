@@ -72,6 +72,7 @@ class FedMLServerManager(ServerManager):
                 "server.wait", event_value=str(self.round_idx)
             )
 
+# register all the different type of handler
     def register_message_receive_handlers(self):
         print("register_message_receive_handlers------")
         self.register_message_receive_handler(
@@ -88,12 +89,18 @@ class FedMLServerManager(ServerManager):
             self.handle_message_receive_model_from_client,
         )
 
+# handler
     def handle_messag_connection_ready(self, msg_params):
         logging.info("Connection is ready!")
         logging.info("self.client_real_ids = {}".format(self.client_real_ids))
+
+        #  the client selection
         self.client_id_list_in_this_round = self.aggregator.client_selection(
             self.round_idx, self.client_real_ids, self.args.client_num_per_round
         )
+        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        print(self.client_id_list_in_this_round)
+        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         self.data_silo_index_list = self.aggregator.data_silo_selection(
             self.round_idx,
             self.args.client_num_in_total,
@@ -110,6 +117,8 @@ class FedMLServerManager(ServerManager):
                 client_idx_in_this_round += 1
 
     def handle_message_client_status_update(self, msg_params):
+
+        # Always check if the client is online
         client_status = msg_params.get(MyMessage.MSG_ARG_KEY_CLIENT_STATUS)
         if client_status == "ONLINE":
             self.client_online_mapping[str(msg_params.get_sender_id())] = True

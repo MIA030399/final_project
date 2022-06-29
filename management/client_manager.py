@@ -145,6 +145,7 @@ class ClientManager(Observer):
 
     def finish(self):
         logging.info("__finish client")
+
         if self.backend == "MPI":
             from mpi4py import MPI
 

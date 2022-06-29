@@ -187,7 +187,6 @@ class MqttS3MNNCommManager(BaseCommunicationManager):
         [client]
         sending message topic (publish): fedml_runid_clientID
         receiving message topic (subscribe): fedml_runid_serverID_clientID
-
         """
         logging.info("mqtt_s3.send_message: starting...{}".format(msg.to_string()))
         if self.client_id == 0:
