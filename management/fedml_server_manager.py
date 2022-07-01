@@ -29,7 +29,13 @@ class FedMLServerManager(ServerManager):
         self.is_preprocessed = is_preprocessed
         self.preprocessed_client_lists = preprocessed_client_lists
 
-        print("!!!!!" + self.preprocessed_client_lists)
+        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        try:
+            print("preprocessed_client_lists")
+            print(self.preprocessed_client_lists)
+        except TypeError as e:
+            pass
+        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
         self.pre_transform_model_file_path = args.global_model_file_path
         self.client_online_mapping = {}
@@ -91,6 +97,7 @@ class FedMLServerManager(ServerManager):
 
 # handler
     def handle_messag_connection_ready(self, msg_params):
+        print("handle_messag_connection_ready")
         logging.info("Connection is ready!")
         logging.info("self.client_real_ids = {}".format(self.client_real_ids))
 
@@ -98,9 +105,15 @@ class FedMLServerManager(ServerManager):
         self.client_id_list_in_this_round = self.aggregator.client_selection(
             self.round_idx, self.client_real_ids, self.args.client_num_per_round
         )
+
         print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        print(self.client_id_list_in_this_round)
+        try:
+            print("client_id_list_in_this_round")
+            print(self.client_id_list_in_this_round)
+        except TypeError as e:
+            pass
         print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
         self.data_silo_index_list = self.aggregator.data_silo_selection(
             self.round_idx,
             self.args.client_num_in_total,
@@ -117,6 +130,7 @@ class FedMLServerManager(ServerManager):
                 client_idx_in_this_round += 1
 
     def handle_message_client_status_update(self, msg_params):
+        print("handle_message_client_status_update")
 
         # Always check if the client is online
         client_status = msg_params.get(MyMessage.MSG_ARG_KEY_CLIENT_STATUS)
@@ -144,6 +158,8 @@ class FedMLServerManager(ServerManager):
             self.is_initialized = True
 
     def handle_message_receive_model_from_client(self, msg_params):
+
+        print("handle_message_receive_model_from_client")
         sender_id = msg_params.get(MyMessage.MSG_ARG_KEY_SENDER)
         if hasattr(self.args, "backend") and self.args.using_mlops:
             self.mlops_event.log_event_ended(
