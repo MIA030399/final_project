@@ -1,5 +1,4 @@
-# python server/torch_server.py --cf config/fedml_config.yaml --rank 0
-
+#
 import fedml
 import torch
 from fedml.data.MNIST.data_loader import download_mnist, load_partition_data_mnist
@@ -60,7 +59,10 @@ def load_data(args):
     For shallow NN or linear models, 
     we uniformly sample a fraction of clients each round (as the original FedAvg paper)
     """
-    args.client_num_in_total = client_num
+    # print(args.client_num_in_total)
+    # args.client_num_in_total = client_num
+    # print(args.client_num_in_total)
+
     dataset = [
         train_data_num,
         test_data_num,

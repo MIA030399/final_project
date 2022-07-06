@@ -1,8 +1,9 @@
 from .fedml_aggregator_code import FedMLAggregator
 from fedml.cross_silo.horizontal.fedml_trainer import FedMLTrainer
-from fedml.cross_silo.horizontal.fedml_client_manager import FedMLClientManager
+# from fedml.cross_silo.horizontal.fedml_client_manager import FedMLClientManager
 # from fedml.cross_silo.horizontal.fedml_server_manager import FedMLServerManager
 from .fedml_server_manager import FedMLServerManager
+from .fedml_client_manager import FedMLClientManager
 from fedml.cross_silo.horizontal.trainer.my_model_trainer_classification import MyModelTrainer as MyModelTrainerCLS
 from fedml.cross_silo.horizontal.trainer.my_model_trainer_nwp import MyModelTrainer as MyModelTrainerNWP
 from fedml.cross_silo.horizontal.trainer.my_model_trainer_tag_prediction import MyModelTrainer as MyModelTrainerTAG
@@ -11,7 +12,7 @@ from fedml.cross_silo.horizontal.trainer.my_model_trainer_tag_prediction import 
 def FedML_Horizontal(
         args,
         client_rank,
-        client_num,
+        client_num, # args.worker_num = 1
         comm,
         device,
         dataset,
@@ -113,7 +114,7 @@ def init_server(
             aggregator,
             comm,
             client_rank,
-            client_num,
+            client_num,# args.worker_num = 1
             backend,
             is_preprocessed=True,
             preprocessed_client_lists=preprocessed_sampling_lists,

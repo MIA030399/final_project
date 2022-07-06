@@ -4,7 +4,8 @@ import time
 
 from fedml.cross_silo.horizontal.message_define import MyMessage
 from fedml.core.distributed.communication.message import Message
-from fedml.core.distributed.server.server_manager import ServerManager
+from management.server_manager import ServerManager
+#from fedml.core.distributed.server.server_manager import ServerManager
 from fedml.core.mlops import MLOpsProfilerEvent, MLOpsMetrics
 
 
@@ -16,7 +17,7 @@ class FedMLServerManager(ServerManager):
         aggregator,
         comm=None,
         client_rank=0,
-        client_num=0,
+        client_num=0, # args.worker_num = 1
         backend="MQTT_S3",
         is_preprocessed=False,
         preprocessed_client_lists=None,
@@ -28,14 +29,6 @@ class FedMLServerManager(ServerManager):
         self.round_idx = 0
         self.is_preprocessed = is_preprocessed
         self.preprocessed_client_lists = preprocessed_client_lists
-
-        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        try:
-            print("preprocessed_client_lists")
-            print(self.preprocessed_client_lists)
-        except TypeError as e:
-            pass
-        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
         self.pre_transform_model_file_path = args.global_model_file_path
         self.client_online_mapping = {}
@@ -54,15 +47,42 @@ class FedMLServerManager(ServerManager):
         self.client_id_list_in_this_round = None
         self.data_silo_index_list = None
 
+        # Mia record the client in which round
+
+        self.newest_round = None
+        self.client_in_which_round = {}
+
+        # Mia
+
+
+
+
     def run(self):
         super().run()
 
-# fedaVG: send the message to the chosen client to tell them: you can start the training
+    # After all the clients is online, SAFA did not select the client
+    # the global parameter will send to all the clients.
     def send_init_msg(self):
         # sampling clients
         self.start_running_time = time.time()
 
         global_model_params = self.aggregator.get_global_model_params()
+
+        # Mia In round 0
+
+        self.newest_round = 0
+        for client_id in self.client_id_list_in_this_round:
+            self.client_in_which_round[client_id] = 0
+
+        print(" Client in which round")
+        print(self.client_in_which_round)
+
+
+
+
+        
+
+        # Mia
 
         client_idx_in_this_round = 0
         for client_id in self.client_id_list_in_this_round:
@@ -80,7 +100,9 @@ class FedMLServerManager(ServerManager):
 
 # register all the different type of handler
     def register_message_receive_handlers(self):
-        print("register_message_receive_handlers------")
+        print("----------------------------------")
+        print("register_message_receive_handlers")
+        print(" Savd those different type of message handler")
         self.register_message_receive_handler(
             MyMessage.MSG_TYPE_CONNECTION_IS_READY, self.handle_messag_connection_ready
         )
@@ -97,28 +119,32 @@ class FedMLServerManager(ServerManager):
 
 # handler
     def handle_messag_connection_ready(self, msg_params):
-        print("handle_messag_connection_ready")
-        logging.info("Connection is ready!")
+        print("*****************handle_messag_connection_ready**********************")
+        logging.info(str(self.rank)+ " Connection is ready!")
         logging.info("self.client_real_ids = {}".format(self.client_real_ids))
 
         #  the client selection
+        # self.client_id_list_in_this_round = self.aggregator.client_selection(
+        #     self.round_idx, self.client_real_ids, self.args.client_num_per_round
+        # )
+
+       # SAFA do not select the client first, it let all the client to train first
         self.client_id_list_in_this_round = self.aggregator.client_selection(
-            self.round_idx, self.client_real_ids, self.args.client_num_per_round
+            self.round_idx, self.client_real_ids, self.args.client_num_in_total
         )
 
-        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        try:
-            print("client_id_list_in_this_round")
-            print(self.client_id_list_in_this_round)
-        except TypeError as e:
-            pass
-        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        # self.data_silo_index_list = self.aggregator.data_silo_selection(
+        #     self.round_idx,
+        #     self.args.client_num_in_total,
+        #     len(self.client_id_list_in_this_round),
+        # )
 
         self.data_silo_index_list = self.aggregator.data_silo_selection(
             self.round_idx,
             self.args.client_num_in_total,
             len(self.client_id_list_in_this_round),
         )
+
         if not self.is_initialized:
             # check client status in case that some clients start earlier than the server
             client_idx_in_this_round = 0
@@ -129,23 +155,50 @@ class FedMLServerManager(ServerManager):
                 )
                 client_idx_in_this_round += 1
 
-    def handle_message_client_status_update(self, msg_params):
-        print("handle_message_client_status_update")
+    def send_message_check_client_status(self, receive_id, datasilo_index):
+        message = Message(
+            MyMessage.MSG_TYPE_S2C_CHECK_CLIENT_STATUS, self.get_sender_id(), receive_id
+        )
+        message.add_params(MyMessage.MSG_ARG_KEY_CLIENT_INDEX, str(datasilo_index))
+        self.send_message(message)
 
+    def handle_message_client_status_update(self, msg_params):
+
+        print("---------handle_message_client_status_update----------")
         # Always check if the client is online
+        # it requires all the client is online but we do not have to require all the client online
+        # we just need to check which client is online, if the number of the online is larger than the required
+        # number, we can sent the model and let them start to train
+        # if large than the require number, we still need it
+
         client_status = msg_params.get(MyMessage.MSG_ARG_KEY_CLIENT_STATUS)
+
         if client_status == "ONLINE":
+            print(str(msg_params.get_sender_id()))
             self.client_online_mapping[str(msg_params.get_sender_id())] = True
 
         # notify MLOps with RUNNING status
         if hasattr(self.args, "backend") and self.args.using_mlops:
             self.mlops_metrics.report_server_training_status(self.args.run_id, MyMessage.MSG_MLOPS_SERVER_STATUS_RUNNING)
 
+        # all_client_is_online = True
+        # for client_id in self.client_id_list_in_this_round:
+        #     if not self.client_online_mapping.get(str(client_id), False):
+        #         all_client_is_online = False
+        #         break
+
         all_client_is_online = True
+        required_client_per_round = 0
         for client_id in self.client_id_list_in_this_round:
             if not self.client_online_mapping.get(str(client_id), False):
                 all_client_is_online = False
-                break
+
+        print(self.client_online_mapping)
+
+        # if required_client_per_round < self.args.client_num_per_round:
+        #     all_client_is_online = False
+        #
+
 
         logging.info(
             "sender_id = %d, all_client_is_online = %s"
@@ -159,7 +212,8 @@ class FedMLServerManager(ServerManager):
 
     def handle_message_receive_model_from_client(self, msg_params):
 
-        print("handle_message_receive_model_from_client")
+        print("-------handle_message_receive_model_from_client----------")
+
         sender_id = msg_params.get(MyMessage.MSG_ARG_KEY_SENDER)
         if hasattr(self.args, "backend") and self.args.using_mlops:
             self.mlops_event.log_event_ended(
@@ -172,8 +226,10 @@ class FedMLServerManager(ServerManager):
         self.aggregator.add_local_trained_result(
             self.client_real_ids.index(sender_id), model_params, local_sample_number
         )
+
         b_all_received = self.aggregator.check_whether_all_receive()
         logging.info("b_all_received = " + str(b_all_received))
+
         if b_all_received:
             if hasattr(self.args, "backend") and self.args.using_mlops:
                 self.mlops_event.log_event_ended(
@@ -214,6 +270,7 @@ class FedMLServerManager(ServerManager):
                 len(self.client_id_list_in_this_round),
             )
 
+            # send the new global model to the client
             client_idx_in_this_round = 0
             for receiver_id in self.client_id_list_in_this_round:
                 self.send_message_sync_model_to_client(
@@ -242,6 +299,7 @@ class FedMLServerManager(ServerManager):
                 self.finish()
                 return
             else:
+                logging.info("waiting for another round...")
                 if hasattr(self.args, "backend") and self.args.using_mlops:
                     self.mlops_event.log_event_started(
                         "server.wait", event_value=str(self.round_idx)
@@ -256,20 +314,13 @@ class FedMLServerManager(ServerManager):
         message.add_params(MyMessage.MSG_ARG_KEY_CLIENT_OS, "PythonClient")
         self.send_message(message)
 
-    def send_message_check_client_status(self, receive_id, datasilo_index):
-        message = Message(
-            MyMessage.MSG_TYPE_S2C_CHECK_CLIENT_STATUS, self.get_sender_id(), receive_id
-        )
-        message.add_params(MyMessage.MSG_ARG_KEY_CLIENT_INDEX, str(datasilo_index))
-        self.send_message(message)
-
     def send_message_sync_model_to_client(
         self, receive_id, global_model_params, client_index
     ):
         logging.info("send_message_sync_model_to_client. receive_id = %d" % receive_id)
         message = Message(
             MyMessage.MSG_TYPE_S2C_SYNC_MODEL_TO_CLIENT,
-            self.get_sender_id(),
+            self.get_sender_id(), # rank
             receive_id,
         )
         message.add_params(MyMessage.MSG_ARG_KEY_MODEL_PARAMS, global_model_params)
@@ -281,3 +332,5 @@ class FedMLServerManager(ServerManager):
             self.aggregated_model_url = message.get(
                 MyMessage.MSG_ARG_KEY_MODEL_PARAMS_URL
             )
+
+    # Mia

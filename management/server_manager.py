@@ -3,9 +3,8 @@ from abc import abstractmethod
 
 from fedml.core.distributed.communication.grpc.grpc_comm_manager import GRPCCommManager
 from fedml.core.distributed.communication.mqtt.mqtt_comm_manager import MqttCommManager
-from fedml.core.distributed.communication.mqtt_s3.mqtt_s3_multi_clients_comm_manager import (
-    MqttS3MultiClientsCommManager,
-)
+# from fedml.core.distributed.communication.mqtt_s3.mqtt_s3_multi_clients_comm_manager import MqttS3MultiClientsCommManager
+from .mqtt_s3_multi_clients_comm_manager import MqttS3MultiClientsCommManager
 from fedml.core.distributed.communication.mqtt_s3.mqtt_s3_status_manager import MqttS3StatusManager
 from fedml.core.distributed.communication.mqtt_s3_mnn.mqtt_s3_comm_manager import MqttS3MNNCommManager
 from fedml.core.distributed.communication.observer import Observer
@@ -15,10 +14,10 @@ from fedml.core.mlops.mlops_configs import MLOpsConfigs
 
 class ServerManager(Observer):
     def __init__(self, args, comm=None, rank=0, size=0, backend="MPI"):
+        print("--------server_manager----------")
         self.args = args
-        self.size = size
+        self.size = size # args.worker_num = 1
         self.rank = rank
-
         self.backend = backend
         if backend == "MPI":
             from fedml.core.distributed.communication.mpi.com_manager import MpiCommunicationManager
@@ -42,7 +41,7 @@ class ServerManager(Observer):
                 args.s3_config_path,
                 topic=str(args.run_id),
                 client_rank=rank,
-                client_num=size,
+                client_num=size, # args.worker_num = 1
                 args=args,
             )
 
@@ -99,24 +98,25 @@ class ServerManager(Observer):
                 client_num=size,
                 args=args,
             )
-
             self.com_manager_status = MqttS3StatusManager(
                 args.mqtt_config_path, args.s3_config_path, topic=args.run_id
             )
+
         self.com_manager.add_observer(self)
         self.message_handler_dict = dict()
 
+
     def run(self):
-        # Firstly, register the messager
-        self.register_message_receive_handlers()
-        # Then the message manager can start to receive message
-        self.com_manager.handle_receive_message()
+        self.register_message_receive_handlers() # fedml_server_manager.py
+        print("client.run_loop_forever")
+        self.com_manager.handle_receive_message() # client.run_loop_forever
         logging.info("running")
 
     def get_sender_id(self):
         return self.rank
 
     def receive_message(self, msg_type, msg_params) -> None:
+        print("--------receive message in server.py---------")
         if hasattr(self.args, "backend") and (
             hasattr(self.args, "using_mlops") and self.args.using_mlops
         ):
@@ -129,6 +129,7 @@ class ServerManager(Observer):
                 "receive_message. rank_id = %d, msg_type = %s."
                 % (self.rank, str(msg_type))
             )
+
         handler_callback_func = self.message_handler_dict[msg_type]
         handler_callback_func(msg_params)
 
@@ -139,7 +140,7 @@ class ServerManager(Observer):
     def register_message_receive_handlers(self) -> None:
         pass
 
-# store all the handler, so that the message management can pass those message to different handler
+    # store all the handler, so that the message management can pass those message to different handler
     def register_message_receive_handler(self, msg_type, handler_callback_func):
         self.message_handler_dict[msg_type] = handler_callback_func
 

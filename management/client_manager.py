@@ -4,9 +4,11 @@ from abc import abstractmethod
 from fedml.core.distributed.communication.grpc.grpc_comm_manager import GRPCCommManager
 from fedml.core.distributed.communication.message import Message
 from fedml.core.distributed.communication.mqtt.mqtt_comm_manager import MqttCommManager
-from fedml.core.distributed.communication.mqtt_s3.mqtt_s3_multi_clients_comm_manager import (
-    MqttS3MultiClientsCommManager,
-)
+# from fedml.core.distributed.communication.mqtt_s3.mqtt_s3_multi_clients_comm_manager import (
+#     MqttS3MultiClientsCommManager,
+# )
+
+from .mqtt_s3_multi_clients_comm_manager import MqttS3MultiClientsCommManager
 from fedml.core.distributed.communication.mqtt_s3.mqtt_s3_status_manager import MqttS3StatusManager
 from fedml.core.distributed.communication.mqtt_s3_mnn.mqtt_s3_comm_manager import MqttS3MNNCommManager
 from fedml.core.distributed.communication.observer import Observer

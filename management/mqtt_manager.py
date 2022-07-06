@@ -8,6 +8,7 @@ import paho.mqtt.client as mqtt
 class MqttManager(object):
     def __init__(self, host, port, user, pwd, keepalive_time,
                  client_id, last_will_topic=None, last_will_msg=None):
+        print("----------mqtt_manager-----------")
         self._host = host
         self._port = port
         self.keepalive_time = keepalive_time
@@ -19,12 +20,10 @@ class MqttManager(object):
         self._published_listeners = list()
         self._passthrough_listeners = list()
 
-        # 每个客户端必须具有唯一的客户端 ID。代理使用客户机 ID 来唯一标识每个用户。
-        # 如果使用相同的客户端 ID 连接第二个客户端，则第一个客户端将断开连接。
+        # real Subscribe
         self.mqtt_connection_id = mqtt.base62(uuid.uuid4().int, padding=22)
         self._client = mqtt.Client(client_id=self.mqtt_connection_id, clean_session=True)
 
-        # make the connection !
         self._client.on_connect = self.on_connect
         self._client.on_publish = self.on_publish
         self._client.on_disconnect = self.on_disconnect
@@ -75,7 +74,9 @@ class MqttManager(object):
 
     def on_connect(self, client, userdata, flags, rc):
         # Callback connected listeners
+        print("-------Mqtt_maanage_on_connect--------")
         self.callback_connected_listener(client)
+        print("--------------------------------------")
 
     def subscribe_will_set_msg(self, client):
         self.add_message_listener(self.last_will_topic, self.callback_will_set_msg)
@@ -85,6 +86,7 @@ class MqttManager(object):
         logging.info(f"MQTT client will be disconnected, id: {self._client_id}, topic: {topic}, payload: {payload}")
 
     def on_message(self, client, userdata, msg):
+        print(" -----Mqtt_maanage_on_message-------")
         logging.info(f"on_message({msg.topic}, {str(msg.payload)})")
 
         for passthrough_listener in self._passthrough_listeners:
