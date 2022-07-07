@@ -1,4 +1,5 @@
-#
+# python server/torch_server.py --cf config/fedml_config.yaml --rank 0
+
 import fedml
 import torch
 from fedml.data.MNIST.data_loader import download_mnist, load_partition_data_mnist

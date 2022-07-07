@@ -25,7 +25,6 @@ class FedMLAggregator(object):
         model_trainer,
     ):
         self.trainer = model_trainer
-
         self.args = args
         self.train_global = train_global
         self.test_global = test_global
@@ -35,14 +34,20 @@ class FedMLAggregator(object):
         self.train_data_local_dict = train_data_local_dict
         self.test_data_local_dict = test_data_local_dict
         self.train_data_local_num_dict = train_data_local_num_dict
-
+        print("aggregator" + str(client_num))
         self.client_num = client_num
         self.device = device
         self.model_dict = dict()
         self.sample_num_dict = dict()
         self.flag_client_model_uploaded_dict = dict()
-        for idx in range(self.args.client_num_per_round):
+
+        # Mia
+        for idx in range(self.client_num):
             self.flag_client_model_uploaded_dict[idx] = False
+
+        # original
+        # for idx in range(self.args.client_num_per_round):
+        #     self.flag_client_model_uploaded_dict[idx] = False
 
         self.mlops_metrics = None
 
@@ -50,7 +55,9 @@ class FedMLAggregator(object):
         self.bypass = []
         self.bypass_sampel_num = []
 
-    def set_bypass(self,index, model_params, sample_num):
+
+
+    def add_bypass(self, index, model_params, sample_num):
         self.bypass.append(model_params)
         self.bypass_sampel_num.append(sample_num)
 
@@ -76,14 +83,17 @@ class FedMLAggregator(object):
 
     def check_whether_all_receive(self):
 
+        print("---------check_whether_all_received------")
+
         # Mia change self.clint_num to self.args.client_num_per_round
         logging.info("client_num_per_round = {}".format(self.args.client_num_per_round))
-        logging.debug("client_num = {}".format(self.client_num))
+        logging.info("client_num = {}".format(self.client_num))
+        # logging.debug("client_num = {}".format(self.client_num))
 
         # Mia when the server received
 
         len_bypass = len(self.bypass)
-        print(len_bypass)
+        print("len_bypass" + str(len_bypass))
 
         # for idx in range(self.args.client_num_per_round):
         #     if not self.flag_client_model_uploaded_dict[idx]:
@@ -97,10 +107,8 @@ class FedMLAggregator(object):
             else:
                 len_received_this_round += 1
 
-        if len_bypass + len_received_this_round != self.args.self.args.client_num_per_round:
+        if len_bypass + len_received_this_round != self.args.client_num_per_round:
             return False
-
-
         # for idx in range(self.client_num):
         #     self.flag_client_model_uploaded_dict[idx] = False
 
@@ -111,19 +119,21 @@ class FedMLAggregator(object):
         model_list = []
         training_num = 0
 
-        # Mia aggreagte the model from
+        # Mia aggregate the model from
 
         # bypass
         if len(self.bypass) == 0:
             pass
         else:
-            for idx in self.bypass:
-                self.model_dict[idx] = transform_list_to_tensor(self.bypass[idx])
+            for idx in range(len(self.bypass)):
+                self.bypass[idx] = transform_list_to_tensor(self.bypass[idx])
                 model_list.append((self.bypass_sampel_num[idx], self.bypass[idx]))
                 training_num += self.bypass_sampel_num[idx]
+            # those model has been used so we need to remove all.
+            self.bypass = []
 
         # the latest submission
-        for idx in range(self.flag_client_model_uploaded_dict):
+        for idx in range(len(self.flag_client_model_uploaded_dict)):
             if self.flag_client_model_uploaded_dict[idx]:
                 self.model_dict[idx] = transform_list_to_tensor(self.model_dict[idx])
                 model_list.append((self.sample_num_dict[idx], self.model_dict[idx]))
@@ -203,11 +213,13 @@ class FedMLAggregator(object):
         # print(client_num_per_round)
         # print(client_id_list_in_total)
         # print("!!!!!!!!!!!!!")
+
         if client_num_per_round == len(client_id_list_in_total):
             return client_id_list_in_total
         np.random.seed(
             round_idx
         )  # make sure for each comparison, we are selecting the same clients each round
+
         client_id_list_in_this_round = np.random.choice(
             client_id_list_in_total, client_num_per_round, replace=False
         )

@@ -12,7 +12,7 @@ from fedml.cross_silo.horizontal.trainer.my_model_trainer_tag_prediction import 
 def FedML_Horizontal(
         args,
         client_rank,
-        client_num, # args.worker_num = 1
+        client_num, # args.worker_num = 3
         comm,
         device,
         dataset,

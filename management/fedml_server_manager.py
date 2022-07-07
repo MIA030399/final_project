@@ -48,14 +48,12 @@ class FedMLServerManager(ServerManager):
         self.data_silo_index_list = None
 
         # Mia record the client in which round
-
-        self.newest_round = None
         self.client_in_which_round = {}
 
         # Mia
 
-
-
+    def get_client_in_which_round(self):
+        return self.client_in_which_round
 
     def run(self):
         super().run()
@@ -70,17 +68,8 @@ class FedMLServerManager(ServerManager):
 
         # Mia In round 0
 
-        self.newest_round = 0
         for client_id in self.client_id_list_in_this_round:
             self.client_in_which_round[client_id] = 0
-
-        print(" Client in which round")
-        print(self.client_in_which_round)
-
-
-
-
-        
 
         # Mia
 
@@ -188,7 +177,6 @@ class FedMLServerManager(ServerManager):
         #         break
 
         all_client_is_online = True
-        required_client_per_round = 0
         for client_id in self.client_id_list_in_this_round:
             if not self.client_online_mapping.get(str(client_id), False):
                 all_client_is_online = False
@@ -198,8 +186,6 @@ class FedMLServerManager(ServerManager):
         # if required_client_per_round < self.args.client_num_per_round:
         #     all_client_is_online = False
         #
-
-
         logging.info(
             "sender_id = %d, all_client_is_online = %s"
             % (msg_params.get_sender_id(), str(all_client_is_online))
@@ -223,9 +209,25 @@ class FedMLServerManager(ServerManager):
         model_params = msg_params.get(MyMessage.MSG_ARG_KEY_MODEL_PARAMS)
         local_sample_number = msg_params.get(MyMessage.MSG_ARG_KEY_NUM_SAMPLES)
 
-        self.aggregator.add_local_trained_result(
-            self.client_real_ids.index(sender_id), model_params, local_sample_number
-        )
+
+        print(self.client_in_which_round)
+
+        # tolerance = 2
+        difference = self.client_in_which_round[sender_id] - self.round_idx
+
+        if 0 > difference >= -2:
+            # This client is tolerable clients
+            self.aggregator.add_bypass(self.client_real_ids.index(sender_id), model_params, local_sample_number)
+            self.client_in_which_round[sender_id] = self.round_idx + 1
+        elif difference == 0:
+            # This client is up-to-date
+            self.aggregator.add_local_trained_result(
+                self.client_real_ids.index(sender_id), model_params, local_sample_number
+            )
+            self.client_in_which_round[sender_id] = self.round_idx + 1
+        else:
+            # This client is deprecated so that this model we do not need it
+            self.client_in_which_round[sender_id] = self.round_idx + 1
 
         b_all_received = self.aggregator.check_whether_all_receive()
         logging.info("b_all_received = " + str(b_all_received))
@@ -261,14 +263,30 @@ class FedMLServerManager(ServerManager):
                 }
                 self.mlops_metrics.report_server_training_round_info(round_info)
 
+
+            # Mia
+            # we only need to send the model to the update and deprecated client
+            send_to_model_client = []
+            for idx in self.client_in_which_round:
+                if self.client_in_which_round[idx] == self.round_idx + 1:
+                    send_to_model_client.append(idx)
+                else:
+                    pass
+            print("chosen Client")
+            print(send_to_model_client)
+
+            n_send_to_model_client = len(send_to_model_client)
+
             self.client_id_list_in_this_round = self.aggregator.client_selection(
-                self.round_idx, self.client_real_ids, self.args.client_num_per_round
+                self.round_idx, send_to_model_client, n_send_to_model_client
             )
             self.data_silo_index_list = self.aggregator.data_silo_selection(
                 self.round_idx,
-                self.args.client_num_in_total,
-                len(self.client_id_list_in_this_round),
+                n_send_to_model_client,
+                n_send_to_model_client,
             )
+
+            ## Mia
 
             # send the new global model to the client
             client_idx_in_this_round = 0
@@ -279,6 +297,7 @@ class FedMLServerManager(ServerManager):
                     self.data_silo_index_list[client_idx_in_this_round],
                 )
                 client_idx_in_this_round += 1
+
 
             if hasattr(self.args, "backend") and self.args.using_mlops:
                 model_info = {
